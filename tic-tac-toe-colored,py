@@ -1,0 +1,210 @@
+import os
+import sys
+import random
+import time
+from colorama import Fore, Style, init
+
+# Initialize colorama for cross-platform compatibility
+init(autoreset=True)
+
+# --- Themed Symbols and Colors ---
+PLAYER_X_SYMBOL = f"{Fore.RED}🚀"
+PLAYER_O_SYMBOL = f"{Fore.GREEN}🪐"
+RESET_COLOR = Style.RESET_ALL
+
+# --- Game Logic Functions (Minimax) ---
+def check_winner(board, player):
+    """Checks if the current player has won."""
+    for row in board:
+        if all(cell == player for cell in row):
+            return True
+    for col in range(3):
+        if all(board[row][col] == player for row in range(3)):
+            return True
+    if all(board[i][i] == player for i in range(3)):
+        return True
+    if all(board[i][2 - i] == player for i in range(3)):
+        return True
+    return False
+
+def is_board_full(board):
+    """Checks if the board is full (a draw)."""
+    for row in board:
+        if " " in row:
+            return False
+    return True
+
+def get_empty_spots(board):
+    """Returns a list of all empty spots (row, col)."""
+    spots = []
+    for r in range(3):
+        for c in range(3):
+            if board[r][c] == " ":
+                spots.append((r, c))
+    return spots
+
+def minimax(board, is_maximizing):
+    """
+    Recursively evaluates all possible moves for an unbeatable AI.
+    'O' is the maximizing player (+1), and 'X' is the minimizing player (-1).
+    """
+    if check_winner(board, "O"):
+        return 1
+    if check_winner(board, "X"):
+        return -1
+    if is_board_full(board):
+        return 0
+
+    if is_maximizing:
+        best_score = -float('inf')
+        for r, c in get_empty_spots(board):
+            board[r][c] = "O"
+            score = minimax(board, False)
+            board[r][c] = " "  # Undo the move
+            best_score = max(score, best_score)
+        return best_score
+    else:
+        best_score = float('inf')
+        for r, c in get_empty_spots(board):
+            board[r][c] = "X"
+            score = minimax(board, True)
+            board[r][c] = " "  # Undo the move
+            best_score = min(score, best_score)
+        return best_score
+
+def find_best_move(board):
+    """Finds the optimal move for the AI ('O') using Minimax."""
+    best_score = -float('inf')
+    best_move = None
+    
+    for r, c in get_empty_spots(board):
+        board[r][c] = "O"
+        score = minimax(board, False)
+        board[r][c] = " "
+        if score > best_score:
+            best_score = score
+            best_move = (r, c)
+    return best_move
+
+def get_ai_move(board, difficulty):
+    """Generates an AI move based on the selected difficulty."""
+    if difficulty == 'easy':
+        empty_spots = [(r, c) for r in range(3) for c in range(3) if board[r][c] == " "]
+        return random.choice(empty_spots)
+    elif difficulty == 'hard':
+        return find_best_move(board)
+
+# --- Visuals and User Interface ---
+def clear_screen():
+    """Clears the terminal screen."""
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def print_board(board):
+    """Prints the creative Tic-Tac-Toe board without special grid characters."""
+    clear_screen()
+    print("\n" + " " + "_"*11)
+    for i, row in enumerate(board):
+        row_str = " "
+        for j, cell in enumerate(row):
+            if cell == "X":
+                row_str += f" {PLAYER_X_SYMBOL} "
+            elif cell == "O":
+                row_str += f" {PLAYER_O_SYMBOL} "
+            else:
+                row_str += f" {cell} "
+            if j < 2:
+                row_str += "|"
+        print(row_str)
+        if i < 2:
+            print(" " + " " + "_"*11)
+    print(" " + "-"*11)
+
+def cinematic_intro():
+    """Plays a short, animated intro sequence."""
+    messages = [
+        f"{Fore.CYAN}Initiating galactic comms...{RESET_COLOR}",
+        f"{Fore.CYAN}Connecting to the Mothership...{RESET_COLOR}",
+        f"{Fore.CYAN}The battle for the cosmos begins in...",
+        f"{Fore.YELLOW}3{RESET_COLOR}",
+        f"{Fore.YELLOW}2{RESET_COLOR}",
+        f"{Fore.YELLOW}1{RESET_COLOR}",
+        f"{Fore.CYAN}Commence cosmic conquest!{RESET_COLOR}"
+    ]
+    for msg in messages:
+        clear_screen()
+        print(msg)
+        time.sleep(1)
+    clear_screen()
+
+# --- Main Game Function ---
+def tic_tac_toe():
+    """The main game loop with player interaction and AI."""
+    clear_screen()
+    print(f"{Fore.CYAN}Welcome to the Cosmic Tic-Tac-Toe Arena!{RESET_COLOR}")
+    player_name = input("Enter your commander name: ")
+
+    clear_screen()
+    print(f"Greetings, Commander {player_name}!")
+    print(f"Choose your opponent's difficulty:")
+    print(f"1. {Fore.GREEN}Easy (Random AI){RESET_COLOR}")
+    print(f"2. {Fore.RED}Hard (Unbeatable Minimax AI){RESET_COLOR}")
+    
+    choice = input("Enter 1 or 2: ")
+    difficulty = 'hard' if choice == '2' else 'easy'
+
+    cinematic_intro()
+    
+    board = [[" " for _ in range(3)] for _ in range(3)]
+    current_player = "X"
+    ai_player = "O"
+
+    print(f"Commander {player_name}, you are {PLAYER_X_SYMBOL}.")
+    print(f"Your opponent is {PLAYER_O_SYMBOL} on {difficulty.upper()} difficulty.")
+
+    while True:
+        print_board(board)
+        
+        if current_player == ai_player:
+            if difficulty == 'easy':
+                print(f"\n{PLAYER_O_SYMBOL}{RESET_COLOR} is plotting a strategy...")
+            else:
+                print(f"\n{PLAYER_O_SYMBOL}{RESET_COLOR} is calculating all possible futures...")
+            time.sleep(1)
+            row, col = get_ai_move(board, difficulty)
+            board[row][col] = current_player
+            print(f"{PLAYER_O_SYMBOL}{RESET_COLOR} has made its move.")
+        else:
+            try:
+                row = int(input(f"\n{PLAYER_X_SYMBOL}{RESET_COLOR} Commander {player_name}, enter your coordinates. Row (0, 1, or 2): "))
+                col = int(input(f"{PLAYER_X_SYMBOL}{RESET_COLOR} Commander {player_name}, enter your coordinates. Column (0, 1, or 2): "))
+                
+                if not (0 <= row <= 2 and 0 <= col <= 2):
+                    print(f"{Fore.YELLOW}Warning: Invalid coordinates. Rows and columns must be between 0 and 2. Try again.")
+                    continue
+                if board[row][col] != " ":
+                    print(f"{Fore.YELLOW}Warning: That quadrant is already occupied! Select an empty space.")
+                    continue
+                
+                board[row][col] = current_player
+                
+            except ValueError:
+                print(f"{Fore.RED}Error: Invalid input. Please enter a numerical coordinate.")
+                continue
+        
+        if check_winner(board, current_player):
+            print_board(board)
+            if current_player == ai_player:
+                print(f"\n{Fore.RED}Mission Failed! The AI has conquered the galaxy. You lose, Commander {player_name}.")
+            else:
+                print(f"\n{Fore.GREEN}Mission Accomplished! You have conquered the cosmos! You win, Commander {player_name}!")
+            break
+            
+        if is_board_full(board):
+            print_board(board)
+            print(f"\n{Fore.CYAN}A cosmic stalemate! The battle ends in a draw.")
+            break
+        
+        current_player = "O" if current_player == "X" else "X"
+            
+if __name__ == "__main__":
+    tic_tac_toe()
